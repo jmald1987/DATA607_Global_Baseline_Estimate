@@ -1,0 +1,10 @@
+---
+title: "Global Baseline Estimate"
+author: "Johnny Maldonado"
+date: "2026-09-16"
+output: html_document
+---
+
+## Introduction
+
+The goal of this project is to use the survey data I collected on movie ratings to develop a non-personalized recommendation using the Global Baseline Estimate method. I plan to first examine the structure and distribution of the ratings, then calculate the overall average rating and compare individual user and movie ratings against that average to determine the adjustments needed for the Global Baseline Estimate. I will also review the dataset for missing ratings, inconsistent formatting, or other issues that may need to be addressed before completing the recommendation analysis.
