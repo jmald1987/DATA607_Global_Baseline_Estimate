@@ -123,15 +123,21 @@ baseline_estimates
 
 The estimated ratings can be sorted from highest to lowest to identify the strongest potential recommendations for each user.
 
-```{r recommendations}
+```{r recommendations, corrected grouping} 
 recommendations <- baseline_estimates %>%
-  arrange(name, desc(estimated_rating))
+  group_by(name) %>%
+  slice_max(
+    order_by = estimated_rating,
+    n = 1,
+    with_ties = FALSE
+  ) %>%
+  ungroup() %>%
+  select(name, title, media_type, estimated_rating)
 
 recommendations
 ```
 
-## Conclusions
+## Conclusions 
 
-The Global Baseline Estimate uses the overall rating average along with differences in individual user behavior and movie ratings to estimate ratings that were missing from the original survey. This provides a non-personalized baseline recommendation method while still accounting for whether a particular user tends to rate titles higher or lower and whether a particular title tends to receive ratings above or below the overall average.
 
-The highest estimated ratings can be used to identify potential recommendations for each user. The analysis could be extended by collecting additional ratings, comparing estimated ratings with actual ratings collected later, or comparing the Global Baseline Estimate with more personalized recommendation methods.
+The Global Baseline Estimate uses the overall rating average along with user and title effects to estimate missing ratings. These estimates are then used to identify the highest predicted title for each user. This approach accounts for differences in how individual users rate titles as well as differences in how individual titles are rated overall.
