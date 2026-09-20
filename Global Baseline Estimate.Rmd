@@ -8,3 +8,130 @@ output: html_document
 ## Introduction
 
 The goal of this project is to use the survey data I collected on movie ratings to develop a non-personalized recommendation using the Global Baseline Estimate method. I plan to first examine the structure and distribution of the ratings, then calculate the overall average rating and compare individual user and movie ratings against that average to determine the adjustments needed for the Global Baseline Estimate. I will also review the dataset for missing ratings, inconsistent formatting, or other issues that may need to be addressed before completing the recommendation analysis.
+
+### Load Packages
+
+```{r loading libraries}
+
+library(dplyr)
+library(readr)
+library(ggplot2)
+library(tidyr)
+```
+### Load data
+```{r load data}
+movie_ratings <-read_csv("https://github.com/jmald1987/DATA607-Movie_Ratings/raw/refs/heads/main/movie_ratings.csv"
+)
+```
+
+### Examine the Data
+
+Before calculating the Global Baseline Estimate, I examined the structure and summary of the dataset to identify the variables, data types, and missing ratings.
+
+```{r examine-data}
+glimpse(movie_ratings)
+summary(movie_ratings)
+```
+
+The dataset contains 77 observations and four variables: `name`, `title`, `media_type`, and `rating`. The initial examination also shows that `rating` was imported as a character variable because unrated titles are represented by the text `"NULL"`.
+
+### Prepare the Data
+
+Before calculating averages, the `"NULL"` values need to be treated as missing values and the remaining ratings converted from character values to numeric values.
+
+```{r prepare-data}
+movie_ratings <- movie_ratings %>%
+  mutate(
+    rating = na_if(rating, "NULL"),
+    rating = as.numeric(rating)
+  )
+
+glimpse(movie_ratings)
+summary(movie_ratings)
+```
+
+After cleaning, `rating` is numeric and unrated movies are represented as `NA`. These missing ratings can now be excluded from the average calculations while remaining available as the ratings that may later be estimated.
+
+### Calculate the Global Mean
+
+The global mean represents the average of all available ratings in the dataset and serves as the starting point for the Global Baseline Estimate.
+
+```{r global-mean}
+global_mean <- mean(movie_ratings$rating, na.rm = TRUE)
+
+global_mean
+```
+
+### Calculate User Averages and Effects
+
+Next, the average rating for each user is calculated. The user effect measures the difference between each user's average rating and the global mean.
+
+```{r user-effects}
+user_effects <- movie_ratings %>%
+  group_by(name) %>%
+  summarise(
+    user_average = mean(rating, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    user_effect = user_average - global_mean
+  )
+
+user_effects
+```
+
+A positive user effect indicates that the user tends to give ratings above the overall average, while a negative effect indicates that the user tends to give lower ratings.
+
+### Calculate Movie Averages and Effects
+
+The same process is used for each title. The movie effect measures the difference between a movie's average rating and the global mean.
+
+```{r movie-effects}
+movie_effects <- movie_ratings %>%
+  group_by(title) %>%
+  summarise(
+    movie_average = mean(rating, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    movie_effect = movie_average - global_mean
+  )
+
+movie_effects
+```
+
+A positive movie effect indicates that the title was generally rated above the global average, while a negative value indicates that it was generally rated below the global average.
+
+### Calculate the Global Baseline Estimates
+
+The Global Baseline Estimate combines the global mean with the user and movie effects. The calculation is applied to the missing ratings to estimate how each user might rate a title they did not rate in the original survey.
+
+```{r baseline-estimates}
+baseline_estimates <- movie_ratings %>%
+  filter(is.na(rating)) %>%
+  select(name, title, media_type) %>%
+  left_join(user_effects, by = "name") %>%
+  left_join(movie_effects, by = "title") %>%
+  mutate(
+    estimated_rating = global_mean + user_effect + movie_effect
+  )
+
+baseline_estimates
+```
+
+### Identify Recommendations
+
+The estimated ratings can be sorted from highest to lowest to identify the strongest potential recommendations for each user.
+
+```{r recommendations}
+recommendations <- baseline_estimates %>%
+  arrange(name, desc(estimated_rating))
+
+recommendations
+```
+
+## Conclusions
+
+The Global Baseline Estimate uses the overall rating average along with differences in individual user behavior and movie ratings to estimate ratings that were missing from the original survey. This provides a non-personalized baseline recommendation method while still accounting for whether a particular user tends to rate titles higher or lower and whether a particular title tends to receive ratings above or below the overall average.
+
+The highest estimated ratings can be used to identify potential recommendations for each user. The analysis could be extended by collecting additional ratings, comparing estimated ratings with actual ratings collected later, or comparing the Global Baseline Estimate with more personalized recommendation methods.
